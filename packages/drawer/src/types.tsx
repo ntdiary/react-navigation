@@ -252,6 +252,11 @@ export type DrawerNavigationEventMap = {
    * Event which fires on tapping on the item in the drawer menu.
    */
   drawerItemPress: { data: undefined; canPreventDefault: true };
+
+  /**
+   * Event which fires when a transition animation ends.
+   */
+  transitionEnd: { data: { closing: boolean } };
 };
 
 export type DrawerNavigationHelpers = NavigationHelpers<
@@ -301,6 +306,7 @@ export type DrawerProps = {
   keyboardDismissMode: 'none' | 'on-drag';
   onClose: () => void;
   onOpen: () => void;
+  onTransitionEnd: () => void;
   open: boolean;
   overlayStyle?: StyleProp<ViewStyle>;
   renderDrawerContent: () => React.ReactNode;

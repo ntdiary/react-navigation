@@ -46,6 +46,7 @@ export default function Drawer({
   keyboardDismissMode,
   onClose,
   onOpen,
+  onTransitionEnd,
   open,
   overlayStyle,
   renderDrawerContent,
@@ -155,15 +156,25 @@ export default function Drawer({
 
       touchStartX.value = 0;
       touchX.value = 0;
-      translationX.value = withSpring(translateX, {
-        velocity,
-        stiffness: 1000,
-        damping: 500,
-        mass: 3,
-        overshootClamping: true,
-        restDisplacementThreshold: 0.01,
-        restSpeedThreshold: 0.01,
-      });
+      const startValue = translationX.value;
+      translationX.value = withSpring(
+        translateX,
+        {
+          velocity,
+          stiffness: 1000,
+          damping: 500,
+          mass: 3,
+          overshootClamping: true,
+          restDisplacementThreshold: 0.01,
+          restSpeedThreshold: 0.01,
+        },
+        (finished) => {
+          if (translationX.value === startValue || !finished) {
+            return;
+          }
+          runOnJS(onTransitionEnd)();
+        }
+      );
 
       if (open) {
         runOnJS(onOpen)();
@@ -171,7 +182,15 @@ export default function Drawer({
         runOnJS(onClose)();
       }
     },
-    [getDrawerTranslationX, onClose, onOpen, touchStartX, touchX, translationX]
+    [
+      getDrawerTranslationX,
+      onClose,
+      onOpen,
+      touchStartX,
+      touchX,
+      translationX,
+      onTransitionEnd,
+    ]
   );
 
   React.useEffect(() => toggleDrawer(open), [open, toggleDrawer]);

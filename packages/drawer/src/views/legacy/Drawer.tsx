@@ -259,6 +259,7 @@ export default class DrawerView extends React.Component<DrawerProps> {
       velocity: new Value(0),
     };
 
+    let startPosition: string | number | boolean = 0;
     return block([
       cond(clockRunning(this.clock), NOOP, [
         // Animation wasn't running before
@@ -271,6 +272,7 @@ export default class DrawerView extends React.Component<DrawerProps> {
         set(this.isOpen, isOpen),
         startClock(this.clock),
         call([], this.handleStartInteraction),
+        call([this.position], ([val]) => (startPosition = val)),
         set(this.manuallyTriggerSpring, FALSE),
       ]),
       spring(this.clock, state, { ...SPRING_CONFIG, toValue }),
@@ -290,6 +292,11 @@ export default class DrawerView extends React.Component<DrawerProps> {
             // Sync drawer's state after animation finished
             // This shouldn't be necessary, but there seems to be an issue on iOS
             this.toggleDrawer(this.props.open);
+          }
+        }),
+        call([state.position], ([pos]: readonly number[]) => {
+          if (pos !== startPosition) {
+            this.props.onTransitionEnd();
           }
         }),
       ]),

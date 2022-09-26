@@ -1,314 +1,143 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  useFlipper,
-  useReduxDevToolsExtension,
-} from '@react-navigation/devtools';
+import { useFocusEffect } from '@react-navigation/core';
 import {
   createDrawerNavigator,
-  DrawerScreenProps,
+  DrawerNavigationProp,
 } from '@react-navigation/drawer';
-import {
-  CompositeScreenProps,
-  DarkTheme,
-  DefaultTheme,
-  InitialState,
-  NavigationContainer,
-  PathConfigMap,
-  useNavigationContainerRef,
-} from '@react-navigation/native';
-import {
-  createStackNavigator,
-  HeaderStyleInterpolators,
-  StackScreenProps,
-} from '@react-navigation/stack';
+import { getHeaderTitle } from '@react-navigation/elements';
+import { NavigationContainer, ParamListBase } from '@react-navigation/native';
 import { createURL } from 'expo-linking';
 import * as React from 'react';
-import {
-  Dimensions,
-  I18nManager,
-  Linking,
-  LogBox,
-  Platform,
-  ScaledSize,
-  ScrollView,
-  StatusBar,
-  Text,
-} from 'react-native';
-import {
-  DarkTheme as PaperDarkTheme,
-  DefaultTheme as PaperLightTheme,
-  Divider,
-  List,
-  Provider as PaperProvider,
-} from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useEffect } from 'react';
+import { InteractionManager, Pressable, Text, View } from 'react-native';
 
-import { restartApp } from './Restart';
-import { RootDrawerParamList, RootStackParamList, SCREENS } from './screens';
-import NotFound from './Screens/NotFound';
-import SettingsItem from './Shared/SettingsItem';
+const linking = {
+  prefixes: [createURL('/')],
+  config: {
+    screens: {
+      Home: '/',
+      Feed: '/feed',
+    },
+  },
+};
 
-if (Platform.OS !== 'web') {
-  LogBox.ignoreLogs(['Require cycle:']);
+function Home() {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text>Home Screen</Text>
+    </View>
+  );
 }
 
-const Drawer = createDrawerNavigator<RootDrawerParamList>();
-const Stack = createStackNavigator<RootStackParamList>();
+function formatDate(date: Date) {
+  let hour = date.getHours();
+  let minute = date.getMinutes();
+  let second = date.getSeconds();
+  const misc = date.getMilliseconds();
+  return `${hour < 10 ? '0' + hour : hour}:${
+    minute < 10 ? '0' + minute : minute
+  }:${second < 10 ? '0' + second : second}.${misc}`;
+}
 
-const NAVIGATION_PERSISTENCE_KEY = 'NAVIGATION_STATE';
-const THEME_PERSISTENCE_KEY = 'THEME_TYPE';
+type FeedProps = {
+  navigation: DrawerNavigationProp<ParamListBase, string>;
+};
 
-const SCREEN_NAMES = Object.keys(SCREENS) as (keyof typeof SCREENS)[];
+function Feed(props: FeedProps) {
+  useFocusEffect(() => {
+    // TODO:del
+    console.log('useFocusEffect', formatDate(new Date()));
+  });
+  useEffect(() => {
+    InteractionManager.runAfterInteractions(() => {
+      // TODO:del
+      console.log('InteractionManager', formatDate(new Date()));
+    });
 
-export default function App() {
-  const [theme, setTheme] = React.useState(DefaultTheme);
-
-  const [isReady, setIsReady] = React.useState(Platform.OS === 'web');
-  const [initialState, setInitialState] = React.useState<
-    InitialState | undefined
-  >();
-
-  React.useEffect(() => {
-    const restoreState = async () => {
-      try {
-        const initialUrl = await Linking.getInitialURL();
-
-        if (Platform.OS !== 'web' || initialUrl === null) {
-          const savedState = await AsyncStorage?.getItem(
-            NAVIGATION_PERSISTENCE_KEY
-          );
-
-          const state = savedState ? JSON.parse(savedState) : undefined;
-
-          if (state !== undefined) {
-            setInitialState(state);
-          }
-        }
-      } finally {
-        try {
-          const themeName = await AsyncStorage?.getItem(THEME_PERSISTENCE_KEY);
-
-          setTheme(themeName === 'dark' ? DarkTheme : DefaultTheme);
-        } catch (e) {
-          // Ignore
-        }
-
-        setIsReady(true);
-      }
+    function handleEnd(e: { data: { closing: boolean } }) {
+      // TODO:del
+      console.log('transitionEnd', e.data.closing, formatDate(new Date()));
+    }
+    props.navigation.addListener('transitionEnd', handleEnd);
+    return function cleanup() {
+      props.navigation.removeListener('transitionEnd', handleEnd);
     };
-
-    restoreState();
-  }, []);
-
-  const paperTheme = React.useMemo(() => {
-    const t = theme.dark ? PaperDarkTheme : PaperLightTheme;
-
-    return {
-      ...t,
-      colors: {
-        ...t.colors,
-        ...theme.colors,
-        surface: theme.colors.card,
-        accent: theme.dark ? 'rgb(255, 55, 95)' : 'rgb(255, 45, 85)',
-      },
-    };
-  }, [theme.colors, theme.dark]);
-
-  const [dimensions, setDimensions] = React.useState(Dimensions.get('window'));
-
-  React.useEffect(() => {
-    const onDimensionsChange = ({ window }: { window: ScaledSize }) => {
-      setDimensions(window);
-    };
-
-    Dimensions.addEventListener('change', onDimensionsChange);
-
-    return () => Dimensions.removeEventListener('change', onDimensionsChange);
-  }, []);
-
-  const navigationRef = useNavigationContainerRef();
-
-  useReduxDevToolsExtension(navigationRef);
-  useFlipper(navigationRef);
-
-  if (!isReady) {
-    return null;
-  }
-
-  const isLargeScreen = dimensions.width >= 1024;
+  });
 
   return (
-    <PaperProvider theme={paperTheme}>
-      <StatusBar
-        translucent
-        barStyle={theme.dark ? 'light-content' : 'dark-content'}
-        backgroundColor="rgba(0, 0, 0, 0.24)"
-      />
-      <NavigationContainer
-        ref={navigationRef}
-        initialState={initialState}
-        onStateChange={(state) =>
-          AsyncStorage?.setItem(
-            NAVIGATION_PERSISTENCE_KEY,
-            JSON.stringify(state)
-          )
-        }
-        theme={theme}
-        linking={{
-          // To test deep linking on, run the following in the Terminal:
-          // Android: adb shell am start -a android.intent.action.VIEW -d "exp://127.0.0.1:19000/--/simple-stack"
-          // iOS: xcrun simctl openurl booted exp://127.0.0.1:19000/--/simple-stack
-          // Android (bare): adb shell am start -a android.intent.action.VIEW -d "rne://127.0.0.1:19000/--/simple-stack"
-          // iOS (bare): xcrun simctl openurl booted rne://127.0.0.1:19000/--/simple-stack
-          // The first segment of the link is the the scheme + host (returned by `Linking.makeUrl`)
-          prefixes: [createURL('/')],
-          config: {
-            initialRouteName: 'Home',
-            screens: SCREEN_NAMES.reduce<PathConfigMap<RootStackParamList>>(
-              (acc, name) => {
-                // Convert screen names such as SimpleStack to kebab case (simple-stack)
-                const path = name
-                  .replace(/([A-Z]+)/g, '-$1')
-                  .replace(/^-/, '')
-                  .toLowerCase();
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text>Feed Screen</Text>
+    </View>
+  );
+}
 
-                acc[name] = {
-                  path,
-                  screens: {
-                    Article: {
-                      path: 'article/:author?',
-                      parse: {
-                        author: (author: string) =>
-                          author.charAt(0).toUpperCase() +
-                          author.slice(1).replace(/-/g, ' '),
-                      },
-                      stringify: {
-                        author: (author: string) =>
-                          author.toLowerCase().replace(/\s/g, '-'),
-                      },
-                    },
-                    Albums: 'music',
-                    Chat: 'chat',
-                    Contacts: 'people',
-                    NewsFeed: 'feed',
-                    Dialog: 'dialog',
-                  },
-                };
+const Drawer = createDrawerNavigator();
 
-                return acc;
-              },
-              {
-                Home: {
-                  screens: {
-                    Examples: '',
-                  },
-                },
-                NotFound: '*',
-              }
-            ),
-          },
-        }}
-        fallback={<Text>Loading…</Text>}
-        documentTitle={{
-          formatter: (options, route) =>
-            `${options?.title ?? route?.name} - React Navigation Example`,
+type HeaderProps = {
+  title: string;
+  navigation: DrawerNavigationProp<ParamListBase, string>;
+};
+
+function MyHeader(props: HeaderProps) {
+  const back = () => {
+    if (!props.navigation.canGoBack()) {
+      return;
+    }
+    props.navigation.goBack();
+  };
+
+  return (
+    <View
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        flexDirection: 'row',
+        top: 40,
+        height: 40,
+        backgroundColor: 'white',
+      }}
+    >
+      <Pressable
+        onPress={back}
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'center',
+          width: 40,
         }}
       >
-        <Stack.Navigator
-          screenOptions={{
-            headerStyleInterpolator: HeaderStyleInterpolators.forUIKit,
-          }}
-        >
-          <Stack.Screen
-            name="Home"
-            options={{
-              headerShown: false,
-            }}
-          >
-            {() => (
-              <Drawer.Navigator
-                screenOptions={{
-                  drawerType: isLargeScreen ? 'permanent' : undefined,
-                }}
-              >
-                <Drawer.Screen
-                  name="Examples"
-                  options={{
-                    title: 'Examples',
-                    drawerIcon: ({ size, color }) => (
-                      <MaterialIcons size={size} color={color} name="folder" />
-                    ),
-                  }}
-                >
-                  {({
-                    navigation,
-                  }: CompositeScreenProps<
-                    DrawerScreenProps<RootDrawerParamList, 'Examples'>,
-                    StackScreenProps<RootStackParamList>
-                  >) => (
-                    <ScrollView
-                      style={{ backgroundColor: theme.colors.background }}
-                    >
-                      <SafeAreaView edges={['right', 'bottom', 'left']}>
-                        <SettingsItem
-                          label="Right to left"
-                          value={I18nManager.getConstants().isRTL}
-                          onValueChange={() => {
-                            I18nManager.forceRTL(
-                              !I18nManager.getConstants().isRTL
-                            );
-                            restartApp();
-                          }}
-                        />
-                        <Divider />
-                        <SettingsItem
-                          label="Dark theme"
-                          value={theme.dark}
-                          onValueChange={() => {
-                            AsyncStorage?.setItem(
-                              THEME_PERSISTENCE_KEY,
-                              theme.dark ? 'light' : 'dark'
-                            );
+        <Text>&lt;</Text>
+      </Pressable>
+      <Text>{props.title}</Text>
+    </View>
+  );
+}
 
-                            setTheme((t) =>
-                              t.dark ? DefaultTheme : DarkTheme
-                            );
-                          }}
-                        />
-                        <Divider />
-                        {SCREEN_NAMES.map((name) => (
-                          <List.Item
-                            key={name}
-                            testID={name}
-                            title={SCREENS[name].title}
-                            onPress={() => {
-                              navigation.navigate(name);
-                            }}
-                          />
-                        ))}
-                      </SafeAreaView>
-                    </ScrollView>
-                  )}
-                </Drawer.Screen>
-              </Drawer.Navigator>
-            )}
-          </Stack.Screen>
-          <Stack.Screen
-            name="NotFound"
-            component={NotFound}
-            options={{ title: 'Oops!' }}
-          />
-          {SCREEN_NAMES.map((name) => (
-            <Stack.Screen
-              key={name}
-              name={name}
-              getComponent={() => SCREENS[name].component}
-              options={{ title: SCREENS[name].title }}
-            />
-          ))}
-        </Stack.Navigator>
-      </NavigationContainer>
-    </PaperProvider>
+function MyDrawer() {
+  return (
+    <Drawer.Navigator
+      defaultStatus="open"
+      initialRouteName="Home"
+      useLegacyImplementation
+      screenOptions={{
+        headerShown: true,
+        header: ({ navigation, route, options }) => {
+          const title = getHeaderTitle(options, route.name);
+          return <MyHeader navigation={navigation} title={title} />;
+        },
+        drawerStyle: {
+          width: '100%',
+        },
+      }}
+    >
+      <Drawer.Screen name="Home" component={Home} />
+      <Drawer.Screen name="Feed" component={Feed} />
+    </Drawer.Navigator>
+  );
+}
+
+export default function App() {
+  return (
+    <NavigationContainer linking={linking}>
+      <MyDrawer />
+    </NavigationContainer>
   );
 }

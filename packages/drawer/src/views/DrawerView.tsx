@@ -141,6 +141,14 @@ function DrawerViewBase({
     });
   }, [navigation, state.key]);
 
+  const handleTransitionEnd = () => {
+    const closing = drawerStatus === 'closed';
+    return navigation.emit({
+      type: 'transitionEnd',
+      data: { closing },
+    });
+  };
+
   React.useEffect(() => {
     if (drawerStatus === defaultStatus || drawerType === 'permanent') {
       return;
@@ -287,6 +295,7 @@ function DrawerViewBase({
         open={drawerStatus !== 'closed'}
         onOpen={handleDrawerOpen}
         onClose={handleDrawerClose}
+        onTransitionEnd={handleTransitionEnd}
         gestureHandlerProps={gestureHandlerProps}
         swipeEnabled={swipeEnabled}
         swipeEdgeWidth={swipeEdgeWidth}
