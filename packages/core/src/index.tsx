@@ -25,3 +25,13 @@ export { default as usePreventRemoveContext } from './usePreventRemoveContext';
 export { default as useRoute } from './useRoute';
 export { default as validatePathConfig } from './validatePathConfig';
 export * from '@react-navigation/routers';
+
+export function formatDate(date: Date = new Date()) {
+  let hour = date.getHours();
+  let minute = date.getMinutes();
+  let second = date.getSeconds();
+  const misc = date.getMilliseconds();
+  return `${hour < 10 ? '0' + hour : hour}:${
+    minute < 10 ? '0' + minute : minute
+  }:${second < 10 ? '0' + second : second}.${misc}`;
+}

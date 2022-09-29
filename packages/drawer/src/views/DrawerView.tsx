@@ -8,6 +8,7 @@ import {
   DrawerActions,
   DrawerNavigationState,
   DrawerStatus,
+  formatDate,
   ParamListBase,
   useTheme,
 } from '@react-navigation/native';
@@ -140,6 +141,16 @@ function DrawerViewBase({
       target: state.key,
     });
   }, [navigation, state.key]);
+
+  const handleTransitionEnd = () => {
+    // TODO:del
+    console.log('animation end', formatDate());
+    const closing = drawerStatus === 'closed';
+    return navigation.emit({
+      type: 'transitionEnd',
+      data: { closing },
+    });
+  };
 
   React.useEffect(() => {
     if (drawerStatus === defaultStatus || drawerType === 'permanent') {
@@ -287,6 +298,7 @@ function DrawerViewBase({
         open={drawerStatus !== 'closed'}
         onOpen={handleDrawerOpen}
         onClose={handleDrawerClose}
+        onTransitionEnd={handleTransitionEnd}
         gestureHandlerProps={gestureHandlerProps}
         swipeEnabled={swipeEnabled}
         swipeEdgeWidth={swipeEdgeWidth}
